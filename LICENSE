@@ -1,0 +1,85 @@
+Fancy AI™ Core is licensed under the
+Common Public Attribution License Version 1.0 (CPAL-1.0)
+
+  Full license text: https://opensource.org/license/CPAL-1.0
+  SPDX-License-Identifier: CPAL-1.0
+
+CPAL-1.0 是 Open Source Initiative（OSI）於 2007 年正式認可之開放原始碼授權，
+以 Mozilla Public License 1.1 為基礎，另加兩項條款：
+
+  · 第 14 條（標示要求 / Attribution）
+      原始開發者得要求：每次本軟體（或其修改版、較大型作品）被啟動或執行時，
+      必須於終端使用者所見之圖形介面上「顯著顯示」原始開發者之標示資訊。
+      本專案之標示資訊詳見下方 EXHIBIT B。
+
+  · 第 15 條（網路使用 / External Deployment）
+      將本軟體或其修改版以網路服務形式提供他人使用（含 SaaS），
+      視同散布，必須依第 3.2 條提供原始碼。
+      —— 亦即：不得以本軟體之修改版經營閉源雲端服務。
+
+════════════════════════════════════════════════════════════
+EXHIBIT B — Attribution Information（標示資訊）
+════════════════════════════════════════════════════════════
+
+Attribution Copyright Notice:
+    Copyright © 2026 眾律國際法律事務所／評律數位科技（PingLex™）
+    Zhonglü International Law Firm / PingLex Digital Technology
+
+Attribution Phrase (not exceeding 10 words):
+    Powered by Fancy AI™ — PingLex™
+
+Attribution URL:
+    https://www.lawplus.com.tw/
+
+Graphic Image as provided in the Covered Code:
+    public/standalone/assets/fancy-badge.svg
+    （硃砂朱印「F」字標；亦內嵌於 index.html 之頁尾標示）
+
+Display of Attribution Information is REQUIRED in Larger Works.
+    標示資訊於「較大型作品」中之顯示為【必要】。
+
+────────────────────────────────────────────────────────────
+標示義務之具體要求（依 CPAL §14）
+────────────────────────────────────────────────────────────
+
+任何人重製、修改、散布本軟體，或以網路服務形式提供本軟體（含修改版）時，
+必須於使用者所見之圖形介面上，以不小於周邊文字之字級，顯著顯示：
+
+    Powered by Fancy AI™ — PingLex™
+    （並連結至 https://www.lawplus.com.tw/）
+
+本軟體已於介面頁尾預設此標示（見 index.html 之 <footer class="attrib">）。
+**移除或遮蔽該標示，即違反本授權。**
+
+────────────────────────────────────────────────────────────
+商標（不隨授權移轉）
+────────────────────────────────────────────────────────────
+
+PingLex™、Fancy AI™、裁判家、lawRef 為著作權人之商標或服務標章。
+CPAL-1.0 不授予任何商標權。你可自由改作，但：
+
+  · 修改版對外發布請「另行命名」；
+  · 不得以 Fancy AI™／PingLex™ 名義行銷你的修改版；
+  · 不得暗示著作權人對你的修改版有背書、審核或保證。
+  · 惟依 §14 之標示義務，仍須顯示「Powered by Fancy AI™ — PingLex™」。
+
+────────────────────────────────────────────────────────────
+不在本授權範圍之部分
+────────────────────────────────────────────────────────────
+
+下列為獨立產品／服務，須另行取得授權，不適用 CPAL-1.0：
+
+  · 律所版模組（工時記錄、客戶請款、律師酬勞績效、律所報稅、
+    收發與代墊帳簿、掃描建檔、進階範本庫）
+    → 依「Fancy AI™ 律所專用授權」提供，見 fancy-lawfirm。
+  · 裁判家判決資料庫（2,190 萬筆）、lawRef 標註資料、RAG 檢索
+  · MaaS（模型即服務）與教育訓練
+  · PiSuAI（另一獨立商用產品，不在本 repo）
+
+────────────────────────────────────────────────────────────
+專業責任
+────────────────────────────────────────────────────────────
+
+本軟體 AI 產出之書狀、函件僅為初稿，須由執業律師覆核後使用。
+判決字號一律以資料源回傳者為準；AI 不得自行生成判決字號。
+本軟體按「現狀」提供，不負任何擔保與損害賠償責任（CPAL §7、§9）。

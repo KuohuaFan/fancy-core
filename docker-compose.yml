@@ -1,0 +1,41 @@
+# Fancy AI —— 一鍵自建（Postgres + App）
+# 1) cp .env.example .env  並填入 ANTHROPIC_API_KEY（自帶金鑰）
+# 2) docker compose up -d --build
+# 3) 首次建表與示範資料：docker compose exec app npx prisma migrate deploy && docker compose exec app npm run db:seed
+# 4) 開 http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fancy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fancy_dev_pw}
+      POSTGRES_DB: fancy
+    volumes:
+      - fancy_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fancy"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://fancy:${POSTGRES_PASSWORD:-fancy_dev_pw}@db:5432/fancy?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-change_me_in_production}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      NODE_ENV: production
+      # 映像已內含 Prisma 引擎；離線／受限網路部署不應因 checksum 端點不可達而失敗。
+      PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING: "1"
+      PRISMA_SCHEMA_ENGINE_BINARY: /app/node_modules/@prisma/engines/schema-engine-linux-musl-openssl-3.0.x
+      PRISMA_QUERY_ENGINE_LIBRARY: /app/node_modules/@prisma/engines/libquery_engine-linux-musl-openssl-3.0.x.so.node
+    ports:
+      - "3000:3000"
+
+volumes:
+  fancy_db:

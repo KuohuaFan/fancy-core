@@ -1,0 +1,146 @@
+// Fancy — 資料模型
+// 產生 client：npx prisma generate ；建表：npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── 事務所 / 多租戶 ──
+model Firm {
+  id        String          @id @default(cuid())
+  name      String
+  createdAt DateTime        @default(now())
+  users     User[]
+  cases     Case[]
+  perms     Permission[]
+  ledger    LedgerEntry[]
+  events    CalendarEvent[]
+}
+
+// ── 使用者與角色 ──
+// 角色以字串存放，對應 rbac.ts 的 ROLES：所長/管理員/律師/法助/會計/顧問
+model User {
+  id           String   @id @default(cuid())
+  firmId       String
+  firm         Firm     @relation(fields: [firmId], references: [id])
+  name         String
+  email        String   @unique
+  passwordHash String? // scrypt "salt:hash"；未設定者無法登入
+  role         String
+  createdAt    DateTime @default(now())
+  tasks        Task[]   @relation("assignee")
+}
+
+// 功能×角色權限矩陣（每所一份，覆寫 rbac.ts 之預設）
+model Permission {
+  id      String  @id @default(cuid())
+  firmId  String
+  firm    Firm    @relation(fields: [firmId], references: [id])
+  feature String // 存案件/查卷證/PDF標註/查法律/寫書狀/存證信函/範本庫/工作流/分層權限/行事曆/收發文/報稅
+  role    String
+  allowed Boolean @default(false)
+
+  @@unique([firmId, feature, role])
+}
+
+// ── 案件 ──
+model Case {
+  id        String   @id @default(cuid())
+  firmId    String
+  firm      Firm     @relation(fields: [firmId], references: [id])
+  title     String
+  type      String // 家事/契約/智財/刑事/顧問/諮詢
+  status    String // 進行中/已結案/顧問/諮詢
+  client    String
+  opponent  String?
+  court     String?
+  caseNo    String?
+  facts     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+  tasks     Task[]
+  ledger    LedgerEntry[]
+  events    CalendarEvent[]
+  drafts    Draft[]
+  notices   Notice[]
+}
+
+model Document {
+  id       String   @id @default(cuid())
+  caseId   String
+  case     Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  name     String
+  folder   String   @default("07_其他資料")
+  size     Int      @default(0) // bytes
+  storeKey String? // 物件儲存 key（S3 / R2）；僅登錄 metadata 時可為空
+  uploaded DateTime @default(now())
+}
+
+model Task {
+  id         String    @id @default(cuid())
+  caseId     String
+  case       Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  title      String
+  assigneeId String?
+  assignee   User?     @relation("assignee", fields: [assigneeId], references: [id])
+  dueDate    DateTime?
+  done       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+}
+
+model LedgerEntry {
+  id     String   @id @default(cuid())
+  firmId String
+  firm   Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  caseId String?
+  case   Case?    @relation(fields: [caseId], references: [id])
+  date   DateTime
+  kind   String // 收文/發文/代墊/雜費
+  desc   String
+  amount Int      @default(0) // 代墊/雜費金額（TWD，整數）
+
+  @@index([firmId, date])
+}
+
+model CalendarEvent {
+  id       String   @id @default(cuid())
+  firmId   String
+  firm     Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  caseId   String?
+  case     Case?    @relation(fields: [caseId], references: [id])
+  title    String
+  type     String // 開庭/會議/期限
+  startsAt DateTime
+  gcalId   String? // Google Calendar 事件 id（雙向同步）
+
+  @@index([firmId, startsAt])
+}
+
+// AI 產出留痕（合規：AI基本法要求可追溯）
+model Draft {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  kind      String // 書狀 種類
+  content   String   @db.Text
+  model     String // 使用之模型
+  createdBy String
+  createdAt DateTime @default(now())
+}
+
+model Notice {
+  id        String   @id @default(cuid())
+  caseId    String?
+  case      Case?    @relation(fields: [caseId], references: [id])
+  kind      String // 事由
+  content   String   @db.Text
+  model     String
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,33 @@
+{
+  "name": "fancy-core",
+  "version": "1.0.0",
+  "private": true,
+  "license": "CPAL-1.0",
+  "description": "Fancy AI™ Core — 專為律所打造的 AI 智慧管理系統（開源核心）",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "5.18.0",
+    "next": "14.2.5",
+    "next-auth": "5.0.0-beta.20",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.0",
+    "@types/react": "18.3.3",
+    "prisma": "5.18.0",
+    "tsx": "4.16.0",
+    "typescript": "5.5.4"
+  }
+}
