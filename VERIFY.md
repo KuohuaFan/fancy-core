@@ -94,61 +94,63 @@ openssl rand -base64 32
 
 ## D. API 逐條測試（每條都要過）
 
+> **所有 API 測試均須使用 Auth.js session cookie。** 先依 S3 的登入流程，分別建立 `/tmp/owner.txt`、`/tmp/lawyer.txt`、`/tmp/acct.txt`、`/tmp/para.txt`；不得再傳送 `x-user-id` 或其他可偽造身分標頭。
+
 ### D1 案件 cases（權限：存案件）
 ```bash
-curl -s localhost:3000/api/cases -H "x-user-id: $OWNER" | head -c 300; echo
-curl -s -X POST localhost:3000/api/cases -H "x-user-id: $OWNER" -H 'content-type: application/json' \
+curl -s -b /tmp/owner.txt localhost:3000/api/cases | head -c 300; echo
+curl -s -b /tmp/owner.txt -X POST localhost:3000/api/cases -H 'content-type: application/json' \
   -d '{"title":"驗收測試案件","type":"民事","client":"測試客戶","opponent":"測試對造"}'
 ```
 - [ ] GET 回傳陣列；POST 回 201 且再次 GET 看得到新案件
-- [ ] 把 `$OWNER` 換成 `$ACCT`（會計無「存案件」權限）→ **應回 403**
+- [ ] 改用會計的 `/tmp/acct.txt`（會計無「存案件」權限）→ **應回 403**
 
 ### D2 任務 tasks（權限：工作流）
 ```bash
-CASE_ID=$(curl -s localhost:3000/api/cases -H "x-user-id: $OWNER" | head -c 2000 | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-curl -s -X POST localhost:3000/api/tasks -H "x-user-id: $LAWYER" -H 'content-type: application/json' \
+CASE_ID=$(curl -s -b /tmp/owner.txt localhost:3000/api/cases | head -c 2000 | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+curl -s -b /tmp/lawyer.txt -X POST localhost:3000/api/tasks -H 'content-type: application/json' \
   -d "{\"caseId\":\"$CASE_ID\",\"title\":\"驗收任務\",\"dueDate\":\"2026-08-01\"}"
-curl -s localhost:3000/api/tasks -H "x-user-id: $LAWYER" | head -c 300; echo
+curl -s -b /tmp/lawyer.txt localhost:3000/api/tasks | head -c 300; echo
 ```
 - [ ] POST 201、GET 看得到
-- [ ] PATCH 勾選完成：`curl -s -X PATCH localhost:3000/api/tasks -H "x-user-id: $LAWYER" -H 'content-type: application/json' -d '{"id":"<task_id>","done":true}'` → 200
+- [ ] PATCH 勾選完成：`curl -s -b /tmp/lawyer.txt -X PATCH localhost:3000/api/tasks -H 'content-type: application/json' -d '{"id":"<task_id>","done":true}'` → 200
 
 ### D3 帳簿 ledger（權限：收發文）
 ```bash
-curl -s -X POST localhost:3000/api/ledger -H "x-user-id: $ACCT" -H 'content-type: application/json' \
+curl -s -b /tmp/acct.txt -X POST localhost:3000/api/ledger -H 'content-type: application/json' \
   -d "{\"caseId\":\"$CASE_ID\",\"kind\":\"代墊\",\"desc\":\"驗收裁判費\",\"amount\":3300,\"date\":\"2026-07-13\"}"
-curl -s localhost:3000/api/ledger -H "x-user-id: $ACCT" | head -c 300; echo
+curl -s -b /tmp/acct.txt localhost:3000/api/ledger | head -c 300; echo
 ```
 - [ ] POST 201、GET 看得到、DELETE `?id=` 可刪
 
 ### D4 行事曆 events（權限：行事曆）
 ```bash
-curl -s -X POST localhost:3000/api/events -H "x-user-id: $OWNER" -H 'content-type: application/json' \
+curl -s -b /tmp/owner.txt -X POST localhost:3000/api/events -H 'content-type: application/json' \
   -d "{\"caseId\":\"$CASE_ID\",\"title\":\"驗收開庭\",\"kind\":\"開庭\",\"date\":\"2026-08-15\"}"
-curl -s "localhost:3000/api/events?from=2026-08-01&to=2026-08-31" -H "x-user-id: $OWNER"
+curl -s -b /tmp/owner.txt "localhost:3000/api/events?from=2026-08-01&to=2026-08-31"
 ```
 - [ ] POST 201、日期區間查詢有效
 
 ### D5 卷證 documents（權限：查卷證）
 ```bash
-curl -s -X POST localhost:3000/api/documents -H "x-user-id: $PARA" -H 'content-type: application/json' \
+curl -s -b /tmp/para.txt -X POST localhost:3000/api/documents -H 'content-type: application/json' \
   -d "{\"caseId\":\"$CASE_ID\",\"name\":\"驗收卷證.pdf\",\"folder\":\"05_證據\"}"
-curl -s "localhost:3000/api/documents?caseId=$CASE_ID" -H "x-user-id: $PARA"
+curl -s -b /tmp/para.txt "localhost:3000/api/documents?caseId=$CASE_ID"
 ```
 - [ ] POST 201、GET 依 caseId 過濾正確
 
 ### D6 權限 permissions（權限：分層權限）
 ```bash
-curl -s localhost:3000/api/permissions -H "x-user-id: $OWNER"
-curl -s -X PATCH localhost:3000/api/permissions -H "x-user-id: $OWNER" -H 'content-type: application/json' \
+curl -s -b /tmp/owner.txt localhost:3000/api/permissions
+curl -s -b /tmp/owner.txt -X PATCH localhost:3000/api/permissions -H 'content-type: application/json' \
   -d '{"feature":"計費","role":"法助","allowed":true}'
 # 嘗試移除所長權限（應被擋）
-curl -s -X PATCH localhost:3000/api/permissions -H "x-user-id: $OWNER" -H 'content-type: application/json' \
+curl -s -b /tmp/owner.txt -X PATCH localhost:3000/api/permissions -H 'content-type: application/json' \
   -d '{"feature":"存案件","role":"所長","allowed":false}'
 ```
 - [ ] GET 回權限矩陣；PATCH 一般角色成功
 - [ ] **移除所長／管理員權限 → 應回 400「所長／管理員為最高權限，不可移除」**（這條沒過就是 RBAC 破了）
-- [ ] 用 `$LAWYER` 呼叫 → **應回 403**
+- [ ] 改用律師的 `/tmp/lawyer.txt` 呼叫 → **應回 403**
 
 ### D7 AI（llm / draft / notice）
 ```bash
@@ -161,18 +163,18 @@ curl -s -X POST localhost:3000/api/llm -H 'content-type: application/json' \
 
 ### D8 未登入／跨所隔離
 ```bash
-curl -s -i localhost:3000/api/cases | head -1            # 無 x-user-id
+curl -s -i localhost:3000/api/cases | head -1            # 無 session cookie
 ```
 - [ ] **應回 401**
-- [ ] 手動在 DB 建第二個 firm 與其 user，用其 id 呼叫 `/api/cases` → **看不到第一所的案件**（firmId 隔離成立）
+- [ ] 手動在 DB 建第二個 firm 與其 user，以該使用者的 Auth.js session 呼叫 `/api/cases` → **看不到第一所的案件**（firmId 隔離成立）
 
 ## E. 前端（自建模式）
 
-- [ ] **E1** 開 `http://localhost:3000` → 選角色登入 → 側欄 16 項齊全
+- [ ] **E1** 開 `http://localhost:3000` → 以所長登入 → 核心 10 個主頁與 3 個核心範例外掛齊全；不得出現私有律所模組
 - [ ] **E2** 新增一件案件 → 重整頁面後仍在（代表寫進 Postgres，非只存瀏覽器）
 - [ ] **E3** 設定頁「測試連線」→ 顯示「✓ 自建後端已連線」
 - [ ] **E4** 以「會計」登入 → 側欄看不到「案件」（伺服器端權限生效）
-- [ ] **E5** 期限計算器、利益衝突檢查（外掛）可用；掃描建檔可拍照/上傳
+- [ ] **E5** 期限計算器、備忘錄、利益衝突檢查三個核心範例外掛可用；「掃描建檔」屬 `fancy-lawfirm` 私有模組，應在隔離副本另行驗收
 
 ## F. 前端（GitHub Pages 模式，無後端）
 
