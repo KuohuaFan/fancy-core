@@ -45,7 +45,9 @@ export default async function LoginPage() {
 
         <p style={{ fontSize: 11, color: "#9A8F7E", marginTop: 14, lineHeight: 1.6 }}>
           身分由伺服器端 session 驗證（JWT，經 AUTH_SECRET 簽章）。<br />
-          Powered by Fancy AI™ — PingLex™
+          <a href="https://www.lawplus.com.tw/" target="_blank" rel="noopener noreferrer" style={{ color: "#C1272D", fontWeight: 700, textDecoration: "none" }}>
+            Powered by FancyAI | SuitAI
+          </a>
         </p>
       </form>
     </main>

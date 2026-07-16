@@ -5,7 +5,7 @@
 **開源**（CPAL-1.0，OSI 認可）。自建部署、自帶 LLM 金鑰、自付 token；不綁任何雲端服務。
 
 > ⚠️ **標示義務（CPAL §14）**：散布或以網路服務提供本軟體（含修改版）時，
-> 介面上**必須顯著顯示** `Powered by Fancy AI™ — PingLex™` 並連結 lawplus.com.tw。
+> 介面上**必須顯著顯示** `Powered by FancyAI | SuitAI` 並連結 lawplus.com.tw。
 > **網路使用（§15）**：以修改版經營網路服務者，必須公開原始碼。
 
 ## 核心包含（全部開源）
@@ -33,11 +33,13 @@
 
 ## 線上試用（免安裝 Demo）
 
-下載前可先線上試用：**https://yourname.github.io/fancy/**
+下載前可先線上試用：[https://kuohuafan.github.io/fancy-core/](https://kuohuafan.github.io/fancy-core/)
+
+原始碼與版本紀錄：[KuohuaFan/fancy-core](https://github.com/KuohuaFan/fancy-core)
 
 Demo 為純前端，資料只存在你的瀏覽器、AI 為示範輸出（不呼叫真實模型）。下載自建並於「設定」填入自己的 Claude 金鑰後，AI 即完整運作。
 
-> 啟用方式（repo 擁有者）：推送後到 **Settings → Pages → Source: GitHub Actions**，`.github/workflows/deploy-pages.yml` 會自動把 `public/standalone` 發佈為上述網址。並將 README 與 `public/standalone/index.html` 內的 `yourname` 換成你的 GitHub 帳號。
+> 發布狀態：本專案已由 **GitHub Actions** 發布 `public/standalone`，正式 Pages 網址如上；HTTPS 已啟用。
 
 - **`public/standalone/index.html`** — 可獨立運作的前端（本機持久化、內建 Fancy AI 對話與擬稿）。以瀏覽器開啟即可操作。
 - **後端骨架**（Next.js + PostgreSQL + Prisma + Auth.js）— 多人（所級）帳號、伺服器強制分層權限、共用資料庫。依 `docs/SPEC-CMS-BACKEND-001.md` 由開發者／Manus 補完。
@@ -134,33 +136,30 @@ docker compose exec app npm run db:seed     # 選用：載入示範資料
 
 ## 授權、商標與預期使用者
 
-**開源核心：Apache License 2.0** — 免費、可自由使用、修改、散布，**無需啟用碼**。
+**開源核心：Common Public Attribution License 1.0（CPAL-1.0）** — 可依條款使用、修改與散布，核心功能**無需啟用碼**；圖形介面須保留指定 Attribution Phrase，網路部署修改版須依正式條款提供原始碼。
 
 ### 專業使用聲明（非授權條件）
 
-本系統係為 **執業律師與律師事務所** 之案件管理需求設計。Apache-2.0 為開放原始碼授權，
-依開源定義**不得限制使用對象或使用領域**，故本聲明為**專業提醒**，非授權條件：
+本系統係為 **執業律師與律師事務所** 之案件管理需求設計。CPAL-1.0 為開放原始碼授權，
+本專業使用聲明屬於**風險提醒**而非使用領域限制；具體權利義務以 [`LICENSE`](./LICENSE) 為準：
 
 * AI 產出之書狀、函件、契約**僅為初稿**，**須由執業律師覆核後始得使用**。
 * 非法律專業人士使用本系統之輸出對外提供法律服務，**可能違反律師法等規範**，風險與責任自負。
-* 本軟體按「現狀」提供，**不負任何擔保與損害賠償責任**（Apache-2.0 §7、§8）。
+* 本軟體按「現狀」提供，**不負任何擔保與損害賠償責任**（CPAL-1.0 §7、§9）。
 
-### 著作權標示（散布義務）
+### 介面標示與來源義務
 
-依 Apache-2.0 **§4(c)**，重製、修改或散布本軟體（含衍生作品）時，
-**必須保留 [`NOTICE`](./NOTICE) 檔之著作權標示**。介面頁尾預設顯示：
+依 CPAL-1.0 §14 及 [`LICENSE`](./LICENSE) 的 EXHIBIT B，重製、修改、散布本軟體，或以網路服務提供本軟體時，必須於使用者可見的圖形介面顯著顯示：
 
 ```
-© PingLex™ | Fancy AI™ · Apache-2.0 開源 · 關於／授權
+Powered by FancyAI | SuitAI
 ```
 
-部署時請保留此標示，或於「關於／授權」頁以同等顯著方式標示來源。
+本專案已在登入畫面、固定頁尾與「關於／授權」視窗預設顯示該浮水印，並連結至 [lawplus.com.tw](https://www.lawplus.com.tw/)。部署與修改時不得移除、遮蔽或弱化該標示，並應保留 [`NOTICE`](./NOTICE)。
 
 ### 商標
 
-**PingLex™、Fancy AI™、裁判家、lawRef** 為著作權人之商標。Apache-2.0 **不授予商標權**（§6）。
-你可自由改作，但**修改版對外發布請另行命名**，不得以本品牌名義行銷、或暗示著作權人之背書。
-（可註明「基於 Fancy AI™（Apache-2.0）開發」。）
+**PingLex™、Fancy AI™、SuitAI、裁判家、lawRef** 為著作權人使用的商標或服務標章。CPAL-1.0 與本專案授權不授予商標權；修改版對外發布時應另行命名，不得以本品牌名義行銷或暗示著作權人背書，但仍須依 EXHIBIT B 保留指定 Attribution Phrase。
 
 ## 加值服務（不在開源授權範圍）
 
@@ -175,9 +174,6 @@ docker compose exec app npm run db:seed     # 選用：載入示範資料
 
 **開源核心永遠免費、無需啟用碼**；未啟用時，案件、工時、請款、期限計算、利益衝突檢查等功能完全可用。
 
-## 事務所登錄（選填）
+## 聯絡與服務
 
-歡迎律所登錄使用，以便接收更新、教育訓練與加值服務資訊：
-**→ 登錄表單：<請填入你的表單連結>**
-
-登錄為**自願**、非使用條件。
+教育訓練、年度維護、律所模組與加值服務資訊，請由 [眾律國際法律事務所／評律數位科技網站](https://www.lawplus.com.tw/) 聯絡。聯絡或登錄均為自願行為，不是使用公開核心的條件。
