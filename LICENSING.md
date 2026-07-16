@@ -42,7 +42,7 @@ Powered by FancyAI | SuitAI
 
 ## 五、發布前一致性檢查
 
-正式發布前應確認 `LICENSE`、`NOTICE`、`README.md`、`package.json` 與 `package-lock.json` 均宣告 CPAL-1.0；公開介面三個必要位置均顯示 **Powered by FancyAI | SuitAI**；一般瀏覽連結使用不含 `.git` 的 GitHub 專案頁；clone 與 submodule 指令才使用帶 `.git` 尾碼的 URL；私有儲存庫仍為 Private；安全掃描未發現密鑰、個資或生產資料。
+正式發布前應確認 `LICENSE`、`NOTICE`、`README.md`、`package.json` 與 `package-lock.json` 均宣告 CPAL-1.0；公開介面三個必要位置均顯示 **Powered by FancyAI | SuitAI**；一般瀏覽、clone 與 submodule 指令中的 GitHub 儲存庫 URL 均使用無後綴格式；私有儲存庫仍為 Private；安全掃描未發現密鑰、個資或生產資料。
 
 ## References
 

@@ -25,11 +25,11 @@ git push origin main
 ## 二、首次取得公開核心
 
 ```bash
-git clone https://github.com/KuohuaFan/fancy-core.git
+git clone https://github.com/KuohuaFan/fancy-core
 cd fancy-core
 ```
 
-上列 `.git` 網址僅供 Git clone 使用；一般瀏覽請使用不含 `.git` 的 [GitHub 專案頁](https://github.com/KuohuaFan/fancy-core)。
+上列無後綴網址可直接供 Git clone 使用；一般瀏覽請使用 [GitHub 專案頁](https://github.com/KuohuaFan/fancy-core)。
 
 ## 三、更新私有生產部署的 submodule
 
@@ -46,7 +46,7 @@ git push origin main
 首次建立 submodule 時使用：
 
 ```bash
-git submodule add https://github.com/KuohuaFan/fancy-core.git app
+git submodule add https://github.com/KuohuaFan/fancy-core app
 ```
 
 其他環境首次取得私有部署時，應使用 `git clone --recurse-submodules`，或在 clone 後執行 `git submodule update --init --recursive`。
@@ -59,4 +59,4 @@ git submodule add https://github.com/KuohuaFan/fancy-core.git app
 
 ## 五、驗收
 
-發布完成後，應逐一核對公開核心與 Pages 可開啟、Actions 部署成功、三庫預設分支為 `main`、`fancy-ops/app` 的 gitlink 與公開核心目標提交一致，以及私有儲存庫仍維持 Private。網頁文件中的一般 GitHub 連結一律使用不含 `.git` 的專案頁網址；`.git` 尾碼只保留在 clone 或 submodule 指令中。
+發布完成後，應逐一核對公開核心與 Pages 可開啟、Actions 部署成功、三庫預設分支為 `main`、`fancy-ops/app` 的 gitlink 與公開核心目標提交一致，以及私有儲存庫仍維持 Private。網頁文件與維運指令中的 GitHub 儲存庫網址一律使用無後綴形式。
