@@ -11,7 +11,7 @@
 ```bash
 cd fancy
 cp .env.example .env
-#   編輯 .env：至少填 ANTHROPIC_API_KEY（測 AI 用）；AUTH_SECRET 用 openssl rand -base64 32 產生
+#   編輯 .env：設定 LLM_PROVIDER，並至少填入對應的 ANTHROPIC_API_KEY、GOOGLE_API_KEY、OPENAI_API_KEY 或 MISTRAL_API_KEY；AUTH_SECRET 用 openssl rand -base64 32 產生
 docker compose up -d --build
 docker compose ps          # db 與 app 皆應為 running/healthy
 docker compose logs -f app # 應看到 Next.js 啟動、無錯誤
@@ -154,12 +154,16 @@ curl -s -b /tmp/owner.txt -X PATCH localhost:3000/api/permissions -H 'content-ty
 
 ### D7 AI（llm / draft / notice）
 ```bash
-curl -s -X POST localhost:3000/api/llm -H 'content-type: application/json' \
-  -d '{"max_tokens":32,"messages":[{"role":"user","content":"回覆兩個字：連線成功"}]}'
+curl -s -b /tmp/owner.txt -X POST localhost:3000/api/llm -H 'content-type: application/json' \
+  -d '{"provider":"anthropic","max_tokens":32,"messages":[{"role":"user","content":"回覆兩個字：連線成功"}]}'
 ```
-- [ ] 有設 `ANTHROPIC_API_KEY` → 回 Claude 回覆
-- [ ] **未設金鑰 → 回 501**（前端會自動退回示範輸出，屬正常）
-- [ ] `/api/draft`、`/api/notice` 同理可用
+- [ ] `LLM_PROVIDER=anthropic` 且設定 `ANTHROPIC_API_KEY` → 回 Claude 回覆，`provider` 為 `anthropic`
+- [ ] `LLM_PROVIDER=google` 且設定 `GOOGLE_API_KEY` → 回 Gemini 回覆，`provider` 為 `google`
+- [ ] `LLM_PROVIDER=openai` 且設定 `OPENAI_API_KEY` → 回 OpenAI 回覆，`provider` 為 `openai`
+- [ ] `LLM_PROVIDER=mistral` 且設定 `MISTRAL_API_KEY` → 回 Mistral 回覆，`provider` 為 `mistral`
+- [ ] 四家亦可在單次請求中以 `provider` 與 `model` 覆寫預設值
+- [ ] **所選供應商未設金鑰 → 回 501**（前端會自動退回示範輸出，屬正常）
+- [ ] `/api/draft`、`/api/notice` 以登入 session 與有效案件測試，回應及資料庫稽核欄位均記錄實際 provider／model
 
 ### D8 未登入／跨所隔離
 ```bash
@@ -170,17 +174,19 @@ curl -s -i localhost:3000/api/cases | head -1            # 無 session cookie
 
 ## E. 前端（自建模式）
 
-- [ ] **E1** 開 `http://localhost:3000` → 以所長登入 → 核心 10 個主頁與 3 個核心範例外掛齊全；不得出現私有律所模組
+- [ ] **E1** 開 `http://localhost:3000` → 以所長登入 → 核心主頁與 3 個核心開發範例外掛齊全；不得自動載入 `fancy-lawfirm` 律所版外掛、付費裁判資料或客戶專屬資產
 - [ ] **E2** 新增一件案件 → 重整頁面後仍在（代表寫進 Postgres，非只存瀏覽器）
 - [ ] **E3** 設定頁「測試連線」→ 顯示「✓ 自建後端已連線」
 - [ ] **E4** 以「會計」登入 → 側欄看不到「案件」（伺服器端權限生效）
-- [ ] **E5** 期限計算器、備忘錄、利益衝突檢查三個核心範例外掛可用；「掃描建檔」屬 `fancy-lawfirm` 私有模組，應在隔離副本另行驗收
+- [ ] **E5** 期限計算器、備忘錄、利益衝突檢查三個核心開發範例外掛可用；`billing-scan.js`、`ledger-tax.js`、`templates-pro.js` 應只在依 `fancy-lawfirm` 特殊授權完成手動安裝後另行驗收
 
 ## F. 前端（GitHub Pages 模式，無後端）
 
 - [ ] **F1** 開 GitHub Pages 的 demo → 可操作，資料存瀏覽器
-- [ ] **F2** 設定頁填入自己的 `sk-ant-…` 金鑰 → 按「測試連線」→ 顯示「✓ 連線成功」
-- [ ] **F3** 未填金鑰時，AI 功能顯示示範輸出、其餘功能正常（不應報錯）
+- [ ] **F2** 設定頁可選 Claude 或 Gemini，填入自己的瀏覽器測試金鑰後按「測試連線」→ 顯示「✓ 連線成功」；畫面同時明示正式使用應改走自建後端
+- [ ] **F3** 選 OpenAI 或 Mistral 時，GitHub Pages 不要求也不儲存其金鑰，並提示改用自建後端代理；自建後端可依 `LLM_PROVIDER=openai` 或 `LLM_PROVIDER=mistral` 正常回覆
+- [ ] **F4** 未填金鑰時，AI 功能顯示示範輸出、其餘功能正常（不應報錯）
+- [ ] **F5** 設定頁可修改律所名稱、上傳／清除 Logo，並即時套用於登入、側欄及 AI 對話標頭
 
 ---
 

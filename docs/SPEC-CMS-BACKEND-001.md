@@ -26,15 +26,15 @@
 
 ## 五、API 契約
 
-REST，路徑於 `src/app/api/*`。已提供 `cases`（GET 列表／POST 新增）與 `draft`、`notice` 三支為樣板；其餘依同一樣板複製：
+REST 路由位於 `src/app/api/*`，包含案件、任務、收發與帳簿、行事曆、權限、書狀、通知、登入及多模型 LLM 代理；實際方法與契約以各 `route.ts` 為準。
 
 任務 `tasks`：GET（可 `?caseId=`）／POST 指派／PATCH 完成切換。收發文 `ledger`：GET／POST，並提供 `GET /api/ledger/summary?year=` 供報稅頁歸戶加總。行事曆 `events`：GET／POST／PATCH，PATCH 時同步 Google（見第六節）。權限 `permissions`：GET（回本所矩陣）／PUT（僅具「分層權限」者可寫，且不得改動 LOCKED_ROLES）。
 
-每支 handler 一律：`getCtx(req)` 取脈絡 → `requirePermission(...)` → 帶 `firmId` 存取 → 回 JSON。錯誤以 `{ error }` + 對應 status（401 未登入、403 無權、404 不存在、501 未設定金鑰、502 上游錯誤）。
+受保護的律所業務資料 handler 應以 `getCtx(req)` 取脈絡，依功能執行 `requirePermission(...)`，並在資料存取時帶入 `firmId`。登入、健康檢查與 LLM 代理等端點依各自契約處理；錯誤統一以 `{ error }` 搭配對應 status 回傳。
 
 ## 六、外部整合
 
-**AI 引擎（Fancy AI）**：`/api/draft`、`/api/notice` 於伺服器讀 `ANTHROPIC_API_KEY`（事務所自帶金鑰）轉呼叫，前端永不接觸 key；模型由 `LLM_MODEL` 指定。此即現行前端「自帶金鑰」承諾之正式落地。
+**AI 引擎（Fancy AI）**：`/api/llm`、`/api/draft` 與 `/api/notice` 共用伺服器端 adapter，支援 Anthropic Claude、Google Gemini、OpenAI 與 Mistral。事務所以 `LLM_PROVIDER` 選擇供應商，並在伺服器設定相應的 `ANTHROPIC_API_KEY`、`GOOGLE_API_KEY`、`OPENAI_API_KEY` 或 `MISTRAL_API_KEY`；模型可由各供應商的 `*_MODEL` 覆寫。正式自建模式的前端不接觸金鑰。
 
 **Google 行事曆**：以 Auth.js Google provider 取得 calendar scope，於 `events` 之 POST/PATCH 後寫回並存 `gcalId`，達雙向同步。示範版按鈕保留為 OAuth 待接點。
 

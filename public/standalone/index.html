@@ -35,6 +35,8 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .wm .seal{background:var(--wine);color:#fff;width:1.5em;height:1.5em;border-radius:24%;display:inline-flex;
   align-items:center;justify-content:center;margin-right:.2em;font-size:.72em;font-weight:900;
   box-shadow:inset 0 0 0 2px rgba(255,255,255,.32);letter-spacing:0}
+.brand-logo{width:1.65em;height:1.65em;object-fit:contain;border-radius:22%;margin-right:.28em;background:#fff;border:1px solid var(--line)}
+.brand-preview{display:flex;align-items:center;gap:12px;padding:12px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px;margin:8px 0}
 .login-card h1{font-family:var(--serif);font-weight:900;font-size:26px;margin:18px 0 6px;line-height:1.3}
 .login-card p.sub{color:var(--gray);font-size:14px;margin:0 0 22px;line-height:1.6}
 .who{font-size:12.5px;color:var(--gray);font-weight:700;margin:0 0 10px}
@@ -339,7 +341,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 <div id="login">
   <div class="login-card">
     <span class="badge">專為律所打造的 AI 智慧管理系統</span>
-    <h1>登入 <span class="wm"><span class="seal">F</span>ancy</span></h1>
+    <h1>登入 <span class="wm" id="loginBrand"><span class="seal">F</span>ancy</span></h1>
     <p class="sub">選擇你的身分進入。不同角色看到的功能，由所長設定的<span class="mark">分層權限</span>決定。</p>
     <p class="who">以哪個身分登入？</p>
     <div class="users" id="userList"></div>
@@ -355,7 +357,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 <div id="shell" class="hidden">
   <aside id="sidebar">
     <div class="side-top">
-      <span class="wm"><span class="seal">F</span>ancy</span>
+      <span class="wm" id="sideBrand"><span class="seal">F</span>ancy</span>
       <div class="tag">律師 AI 案件管理</div>
     </div>
     <nav class="nav" id="nav"></nav>
@@ -366,7 +368,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
     <div id="demoBar" class="demo-bar hidden">
       <svg class="ic" viewBox="0 0 24 24"><use href="#i-chat"/></svg>
       <span>線上試用 · 資料只存在你的瀏覽器、AI 為示範輸出 ·<span class="hide-sm"> 想完整運作請</span>
-        <a href="https://github.com/KuohuaFan/fancy-core" target="_blank" rel="noopener">到 GitHub 下載自建 ↗</a><span class="hide-sm">，接上自己的 Claude 金鑰即可</span></span>
+        <a href="https://github.com/KuohuaFan/fancy-core" target="_blank" rel="noopener">到 GitHub 下載自建 ↗</a><span class="hide-sm">，可選 Claude、Gemini、OpenAI 或 Mistral</span></span>
       <span class="sp"></span>
       <button onclick="dismissDemo()" title="關閉">×</button>
     </div>
@@ -414,7 +416,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
   </div>
   <div class="chat-top">
     <button onclick="toggleHist()" title="對話記錄"><svg class="ic" viewBox="0 0 24 24"><use href="#i-hist"/></svg></button>
-    <span class="wm"><span class="seal">F</span>ancy AI</span>
+    <span class="wm" id="chatBrand"><span class="seal">F</span>ancy AI</span>
     <div class="ct-title"><div class="t" id="chatTitle">新對話</div><div class="p" id="chatProj"></div></div>
     <button onclick="newConversation()" title="新對話"><svg class="ic" viewBox="0 0 24 24"><use href="#i-plus"/></svg></button>
     <button onclick="closeChat()" title="關閉"><svg class="ic" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
@@ -481,7 +483,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 /* ============================================================
    Fancy AI 案件管理系統 — 律師 AI 案件管理系統 (single-file prototype)
    Persistence: window.storage (fallback to in-memory)
-   AI drafting: Anthropic API in-artifact (graceful fallback)
+   AI drafting: multi-provider adapter with graceful fallback
    ============================================================ */
 
 /* ---------- storage wrapper ---------- */
@@ -586,7 +588,7 @@ function seedPerms(){
 function daysFromNow(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
 function seed(){
   return {
-    settings:{ brand:"Fancy", apiKey:"", model:"claude-sonnet-4-6", licenseKey:"", activeUserId:"u1" },
+    settings:{ brand:"Fancy", logoDataUrl:"", provider:"anthropic", model:"claude-sonnet-4-6", licenseKey:"", activeUserId:"u1" },
     users:[
       {id:"u1",name:"范國華",role:"所長"},
       {id:"u2",name:"陳律師",role:"律師"},
@@ -645,7 +647,7 @@ function seed(){
 let S=null, route="cases", currentCaseId=null, tab={cases:"進行中"};
 async function boot(){ S = (await Store.get("pinglex_state")) || seed(); ensureChat(); await persist();
   await API.probe(); if(API.online){ await syncFromServer(); }
-  renderLogin();
+  applyBrand(); renderLogin();
   booted=true; READY_CBS.forEach(f=>{ try{ f(); }catch(e){ console.error("plugin ready error",e); } }); }
 async function persist(){ await Store.set("pinglex_state", S); }
 /* backward-compatible upgrade: add projects/conversations if missing */
@@ -662,6 +664,12 @@ function ensureChat(){
     {id:"cv2",title:"承攬報酬與遲延利息",projectId:"p2",createdAt:daysFromNow(-1),messages:[]}
   ];
   if(!S.activeConv) S.activeConv=null;
+  if(!S.settings) S.settings={};
+  if(!S.settings.brand) S.settings.brand="Fancy";
+  if(typeof S.settings.logoDataUrl!=="string") S.settings.logoDataUrl="";
+  // 舊版曾把測試金鑰放入持久狀態；升級時移至本分頁 sessionStorage，並從資料庫刪除。
+  if(typeof S.settings.apiKey==="string" && S.settings.apiKey.trim()) setLlmKey(S.settings.apiKey);
+  if(Object.prototype.hasOwnProperty.call(S.settings,"apiKey")) delete S.settings.apiKey;
 }
 function me(){ return S.users.find(u=>u.id===S.settings.activeUserId) || S.users[0]; }
 function can(feature){
@@ -670,6 +678,25 @@ function can(feature){
 }
 function caseById(id){ return S.cases.find(c=>c.id===id); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])); }
+function brandName(){ return String(S&&S.settings&&S.settings.brand||"Fancy").trim()||"Fancy"; }
+function brandWordmark(ai){
+  const name=esc(brandName()+(ai?" AI":""));
+  const logo=S&&S.settings&&S.settings.logoDataUrl;
+  return logo?`<img class="brand-logo" src="${esc(logo)}" alt="">${name}`:`<span class="seal">${esc(brandName().charAt(0)||"F")}</span>${name}`;
+}
+function applyBrand(){
+  const login=document.getElementById("loginBrand"), side=document.getElementById("sideBrand"), chat=document.getElementById("chatBrand");
+  if(login) login.innerHTML=brandWordmark(false);
+  if(side) side.innerHTML=brandWordmark(false);
+  if(chat) chat.innerHTML=brandWordmark(true);
+}
+function chooseBrandLogo(input){
+  const f=input&&input.files&&input.files[0]; if(!f) return;
+  if(!/^image\/(png|jpeg|webp|svg\+xml)$/.test(f.type)){ toast("請選擇 PNG、JPG、WebP 或 SVG 圖檔"); input.value=""; return; }
+  if(f.size>1024*1024){ toast("Logo 檔案請小於 1 MB"); input.value=""; return; }
+  const r=new FileReader(); r.onload=async()=>{ S.settings.logoDataUrl=String(r.result||""); await persist(); render(); toast("Logo 已更新"); }; r.readAsDataURL(f);
+}
+async function clearBrandLogo(){ S.settings.logoDataUrl=""; await persist(); render(); toast("已恢復文字印章"); }
 function money(n){ return "NT$"+Number(n||0).toLocaleString(); }
 
 /* ---------- demo banner ---------- */
@@ -809,11 +836,10 @@ function licBadge(){
 
 /* ============================================================
    LLM 呼叫層（單一入口）
-   模式一｜自建後端：走 /api/llm，金鑰只存在你的伺服器（最安全）。
-   模式二｜GitHub Pages／單檔：由使用者在「設定」填自己的金鑰，
-          瀏覽器直連 Anthropic（需 anthropic-dangerous-direct-browser-access 標頭）。
-          金鑰只留在你自己的裝置，不上傳、不外傳。
-   兩者皆無金鑰時 → 各功能自動退回示範輸出。
+   模式一｜自建後端：走 /api/llm，支援 Claude／Gemini／OpenAI／Mistral；金鑰只存在伺服器（建議）。
+   模式二｜GitHub Pages／單檔測試：使用者可在「設定」填自己的 Claude 或 Gemini 金鑰直連。
+          OpenAI／Mistral 不提供瀏覽器金鑰直連，請下載後使用自建後端。
+   未連線或未設定可用金鑰時 → 各功能自動退回示範輸出。
    ============================================================ */
 function showAbout(){
   modal("關於／授權", `
@@ -834,24 +860,84 @@ function showAbout(){
         <b>商標</b>：PingLex™、Fancy AI™、SuitAI、裁判家、lawRef 為著作權人使用的商標或服務標章；本授權不含商標權。修改版請另行命名。</p>
       <p style="margin:0 0 10px;font-size:12.5px;color:var(--gray)">
         <b>專業責任</b>：AI 產出僅為初稿，<b>須由執業律師覆核後使用</b>；判決字號由資料源錨定，AI 不自行生成。</p>
+      <p style="margin:0 0 10px;font-size:12.5px;color:var(--gray)">
+        <b>CPAL 開源核心</b>：案件與權限管理、AI 工作台、外掛 API，以及期限計算器、備忘錄與利益衝突檢查三個開發範例。</p>
+      <p style="margin:0 0 10px;font-size:12.5px;color:var(--gray)">
+        <b>律所版模組另行授權</b>：工時／請款／收據／酬勞績效／掃描建檔、帳簿／報稅及進階範本，須從 fancy-lawfirm 另行取得並依律師／律所限定免費特殊授權手動安裝；原始碼公開不等於開源。</p>
       <p style="margin:0;font-size:12.5px;color:var(--gray)">
-        <b>不在本授權範圍</b>：律所版模組（工時／請款／酬勞績效／報稅／帳簿／掃描建檔／進階範本）、裁判家判決庫、RAG、MaaS。</p>
+        <b>其他不在本授權範圍</b>：裁判家／lawRef 資料內容、RAG 代管服務、MaaS、部署顧問與教育訓練；開源核心本身不需啟用碼。</p>
     </div>
     <button class="btn" style="width:100%;margin-top:14px" onclick="this.closest('.modal-bg').remove()">關閉</button>`);
 }
-function llmKey(){ return (S && S.settings && S.settings.apiKey || "").trim(); }
-function llmModel(){ return (S && S.settings && S.settings.model) || "claude-sonnet-4-6"; }
-function llmReady(){ return !!llmKey() || (typeof API!=="undefined" && API.online); }
+const LLM_MODELS={
+  anthropic:["claude-sonnet-4-6","claude-haiku-4-5","claude-opus-4-1"],
+  google:["gemini-2.5-flash","gemini-2.5-pro"],
+  openai:["gpt-4.1-mini","gpt-4.1","gpt-4o-mini"],
+  mistral:["mistral-large-latest","mistral-small-latest"]
+};
+function llmProvider(){
+  const p=(S && S.settings && S.settings.provider || "anthropic").toLowerCase();
+  return LLM_MODELS[p]?p:"anthropic";
+}
+function llmProviderLabel(p){ return p==="google"?"Google Gemini":p==="openai"?"OpenAI":p==="mistral"?"Mistral AI":"Anthropic Claude"; }
+function llmRequiresBackend(p){ return p==="openai"||p==="mistral"; }
+function llmKeyEnv(p){ return p==="openai"?"OPENAI_API_KEY":p==="mistral"?"MISTRAL_API_KEY":p==="google"?"GOOGLE_API_KEY":"ANTHROPIC_API_KEY"; }
+const LLM_SESSION_KEY="fancy_llm_api_key";
+let llmSessionKeyMemory="";
+function llmKey(){
+  try{ return (sessionStorage.getItem(LLM_SESSION_KEY)||llmSessionKeyMemory).trim(); }
+  catch(e){ return llmSessionKeyMemory.trim(); }
+}
+function setLlmKey(value){
+  const key=String(value||"").trim(); llmSessionKeyMemory=key;
+  try{ if(key) sessionStorage.setItem(LLM_SESSION_KEY,key); else sessionStorage.removeItem(LLM_SESSION_KEY); }catch(e){}
+}
+function llmModel(provider){
+  const p=provider||llmProvider();
+  const saved=S && S.settings && S.settings.model;
+  return saved && p===llmProvider()?saved:LLM_MODELS[p][0];
+}
+function llmReady(){
+  if(typeof API!=="undefined" && API.online) return true;
+  return !llmRequiresBackend(llmProvider()) && !!llmKey();
+}
+function providerChanged(select){
+  const model=document.getElementById("setModel");
+  if(model && LLM_MODELS[select.value]) model.value=LLM_MODELS[select.value][0];
+}
 async function llmCall(body){
+  const provider=body.provider||llmProvider();
+  const model=body.model||llmModel(provider);
+  const payload=Object.assign({},body,{provider,model});
   // 有自建後端 → 由伺服器代理（金鑰在伺服器）
   if(typeof API!=="undefined" && API.online){
-    const r=await fetch("/api/llm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    if(!r.ok) throw new Error("proxy "+r.status);
-    return r.json();
+    const r=await fetch("/api/llm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error||("AI proxy "+r.status));
+    return data;
   }
-  // 否則 → 瀏覽器直連（使用者自帶金鑰）
+
+  // OpenAI／Mistral 的正式金鑰不得部署在瀏覽器；單檔模式請改用自建後端。
+  if(llmRequiresBackend(provider)) throw new Error(llmProviderLabel(provider)+" 金鑰不得放在瀏覽器；請下載並啟用自建後端");
   const key=llmKey();
   if(!key) throw new Error("尚未設定金鑰");
+
+  if(provider==="google"){
+    const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-goog-api-key":key},
+      body:JSON.stringify({
+        contents:(body.messages||[]).map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]})),
+        ...(body.system?{systemInstruction:{parts:[{text:body.system}]}}:{}),
+        generationConfig:{maxOutputTokens:body.max_tokens||1200}
+      })
+    });
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error("Gemini "+r.status);
+    const text=(data.candidates||[]).flatMap(c=>c.content&&c.content.parts||[]).map(p=>p.text||"").filter(Boolean).join("\n").trim();
+    return {content:[{type:"text",text}],provider,model};
+  }
+
   const r=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers:{
@@ -860,10 +946,11 @@ async function llmCall(body){
       "anthropic-version":"2023-06-01",
       "anthropic-dangerous-direct-browser-access":"true"
     },
-    body:JSON.stringify(Object.assign({model:llmModel()}, body))
+    body:JSON.stringify(Object.assign({model},body))
   });
-  if(!r.ok){ const t=await r.text(); throw new Error("Anthropic "+r.status+" "+t.slice(0,120)); }
-  return r.json();
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error("Anthropic "+r.status);
+  return Object.assign({},data,{provider,model});
 }
 function llmText(data){ return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim(); }
 
@@ -937,7 +1024,7 @@ function toggleNav(open){
 /* ---------- render root ---------- */
 function render(){
   if(!routeAllowed(route)){ route=firstAllowedRoute(); currentCaseId=null; }
-  renderNav();
+  applyBrand(); renderNav();
   document.getElementById("pageTitle").textContent = TITLES[route] || (pluginPage(route)?pluginPage(route).label:null) || "Fancy";
   const c=document.getElementById("content");
   const _pg=pluginPage(route);
@@ -1092,7 +1179,7 @@ async function draft(caseId){
     </div>
     <div id="draftTrans" style="margin-top:4px"></div>
     <p id="${noteId}" style="font-size:11.5px;color:var(--gray);margin:10px 0 0;line-height:1.5">
-      ${live?"由 Claude 即時生成。":"目前環境未連上 AI，顯示示範稿。"}引用法條與卷證頁碼務請律師覆核。</p>`;
+      ${live?"由已選模型即時生成。":"目前環境未連上 AI，顯示示範稿。"}引用法條與卷證頁碼務請律師覆核。</p>`;
   window.__lastDraft={title:c.title, text};
 }
 function draftTranslate(caseId){
@@ -1329,16 +1416,27 @@ function viewSettings(){
   <div class="section-h"><h2 class="t">設定</h2></div>
   <div class="card pad" style="max-width:560px">
     <div class="field"><label>事務所品牌名稱</label><input id="setBrand" value="${esc(S.settings.brand)}"></div>
-    ${API.online?`<div class="field"><label>目前登入身分</label><div class="card pad">${esc(u.name)}（${esc(u.role)}）</div><div class="hint">自建模式的身分與角色由伺服器 session 決定；如需切換，請登出後使用其他帳號登入。</div></div>`:`<div class="field"><label>以此身分操作（示範用角色切換）</label><select id="setUser">${S.users.map(x=>`<option value="${x.id}" ${x.id===u.id?'selected':''}>${esc(x.name)}（${esc(x.role)}）</option>`).join("")}</select><div class="hint">切換角色可即時看到分層權限如何改變左側選單與可用功能。</div></div>`}
-    <div class="field"><label>自帶 AI 金鑰（BYO Key）</label>
-      <input id="setKey" type="password" placeholder="sk-ant-… （在 console.anthropic.com 申請）" value="${esc(S.settings.apiKey)}">
-      <div class="hint">填入你自己的 Claude 金鑰即可啟用 AI：token 由你直接付給 Anthropic，我不經手、不抽成。<b>金鑰只存在你這台裝置的瀏覽器</b>，不會上傳到任何伺服器。</div>
+    <div class="field"><label>事務所 Logo（選填）</label>
+      <div class="brand-preview"><span class="wm" style="font-size:21px">${brandWordmark(false)}</span></div>
+      <input id="setLogo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onchange="chooseBrandLogo(this)">
+      <div class="hint">支援 PNG、JPG、WebP、SVG，檔案上限 1 MB；Logo 僅存於你的部署或本機資料。</div>
+      ${S.settings.logoDataUrl?`<button class="btn ghost sm" style="margin-top:8px" onclick="clearBrandLogo()">清除 Logo</button>`:""}
     </div>
-    <div class="field"><label>模型</label>
-      <select id="setModel">
-        ${["claude-sonnet-4-6","claude-opus-4-1","claude-haiku-4-5"].map(m=>`<option ${((S.settings.model)||"claude-sonnet-4-6")===m?"selected":""}>${m}</option>`).join("")}
+    ${API.online?`<div class="field"><label>目前登入身分</label><div class="card pad">${esc(u.name)}（${esc(u.role)}）</div><div class="hint">自建模式的身分與角色由伺服器 session 決定；如需切換，請登出後使用其他帳號登入。</div></div>`:`<div class="field"><label>以此身分操作（示範用角色切換）</label><select id="setUser">${S.users.map(x=>`<option value="${x.id}" ${x.id===u.id?'selected':''}>${esc(x.name)}（${esc(x.role)}）</option>`).join("")}</select><div class="hint">切換角色可即時看到分層權限如何改變左側選單與可用功能。</div></div>`}
+    <div class="field"><label>LLM 供應商</label>
+      <select id="setProvider" onchange="providerChanged(this)">
+        ${[["anthropic","Anthropic Claude"],["google","Google Gemini"],["openai","OpenAI"],["mistral","Mistral AI"]].map(x=>`<option value="${x[0]}" ${llmProvider()===x[0]?"selected":""}>${x[1]}</option>`).join("")}
       </select>
-      <div class="hint">也可改接其他 LLM（自建後端時於伺服器設定）。</div>
+      <div class="hint">自建後端可安全使用四家供應商；供應商金鑰只設定在你的伺服器環境變數。</div>
+    </div>
+    ${API.online?`<div class="field"><label>AI 金鑰（伺服器管理）</label><div class="hint">目前為自建模式。請在伺服器設定 <code>ANTHROPIC_API_KEY</code>、<code>GOOGLE_API_KEY</code>、<code>OPENAI_API_KEY</code> 或 <code>MISTRAL_API_KEY</code>，瀏覽器不接觸金鑰。</div></div>`:`<div class="field"><label>個人測試金鑰（僅 Claude／Gemini）</label>
+      <input id="setKey" type="password" placeholder="供應商 API 金鑰" value="${esc(llmKey())}">
+      <div class="hint">金鑰只暫存在目前分頁的 <code>sessionStorage</code>，關閉分頁即清除。僅供不含案件機密的個人測試；<b>OpenAI／Mistral 不提供瀏覽器金鑰直連</b>，請下載並使用自建後端。</div>
+    </div>`}
+    <div class="field"><label>模型</label>
+      <input id="setModel" list="llmModelList" value="${esc(llmModel())}">
+      <datalist id="llmModelList">${Object.values(LLM_MODELS).flat().map(m=>`<option value="${m}"></option>`).join("")}</datalist>
+      <div class="hint">可使用上列已驗證預設值，也可填入供應商提供的其他相容模型 ID。</div>
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn" style="flex:1" onclick="saveSettings()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-check"/></svg>儲存設定</button>
@@ -1368,31 +1466,39 @@ function viewSettings(){
 async function saveSettings(){
   S.settings.brand=document.getElementById("setBrand").value||"Fancy";
   const setUser=document.getElementById("setUser"); if(setUser) S.settings.activeUserId=setUser.value;
-  S.settings.apiKey=document.getElementById("setKey").value.trim();
-  const m=document.getElementById("setModel"); if(m) S.settings.model=m.value;
-  await persist(); toast("設定已儲存"); render();
+  const p=document.getElementById("setProvider"); if(p) S.settings.provider=p.value;
+  const key=document.getElementById("setKey"); if(key) setLlmKey(key.value);
+  const m=document.getElementById("setModel"); if(m) S.settings.model=m.value.trim()||LLM_MODELS[llmProvider()][0];
+  await persist(); applyBrand(); toast("設定已儲存"); render();
 }
 function llmStatusHtml(){
-  const online = (typeof API!=="undefined" && API.online);
-  if(online) return `<div class="card pad" style="background:#E4F1E9;border-color:#B9DCC8"><b style="color:var(--ok)">✓ 自建後端已連線</b><div class="hint" style="margin-top:4px">AI 由你的伺服器代理，金鑰存在伺服器端（最安全）。</div></div>`;
-  if(llmKey()) return `<div class="card pad" style="background:#E4F1E9;border-color:#B9DCC8"><b style="color:var(--ok)">✓ 已設定金鑰（瀏覽器直連）</b><div class="hint" style="margin-top:4px">AI 由本機直接呼叫 Anthropic。金鑰只存在這台裝置；<b>請勿在公用電腦使用</b>。按「測試連線」確認可用。</div></div>`;
-  return `<div class="card pad" style="background:#FBF3E4;border-color:var(--gold-soft)"><b style="color:#8a5a1c">尚未啟用 AI</b><div class="hint" style="margin-top:4px">填入你自己的 Claude 金鑰即可啟用；未填時 AI 功能顯示示範輸出，其餘功能（案件、工時、請款、期限計算…）照常可用。</div></div>`;
+  const online=(typeof API!=="undefined" && API.online);
+  const label=llmProviderLabel(llmProvider());
+  if(online) return `<div class="card pad" style="background:#E4F1E9;border-color:#B9DCC8"><b style="color:var(--ok)">✓ 自建後端已連線</b><div class="hint" style="margin-top:4px">目前選擇 ${label}；請求由你的伺服器代理，金鑰不會送到瀏覽器。</div></div>`;
+  if(llmRequiresBackend(llmProvider())) return `<div class="card pad" style="background:#FBF3E4;border-color:var(--gold-soft)"><b style="color:#8a5a1c">${label} 需使用自建後端</b><div class="hint" style="margin-top:4px">GitHub Pages 不提供 ${label} 瀏覽器金鑰直連。請下載後於伺服器設定 <code>${llmKeyEnv(llmProvider())}</code>。</div></div>`;
+  if(llmKey()) return `<div class="card pad" style="background:#E4F1E9;border-color:#B9DCC8"><b style="color:var(--ok)">✓ 已設定 ${label} 測試金鑰</b><div class="hint" style="margin-top:4px">金鑰僅暫存在目前分頁，關閉分頁即清除；只可使用不含案件機密的測試資料。</div></div>`;
+  return `<div class="card pad" style="background:#FBF3E4;border-color:var(--gold-soft)"><b style="color:#8a5a1c">尚未啟用 AI</b><div class="hint" style="margin-top:4px">可選 Claude 或 Gemini 並填入個人測試金鑰；正式使用及 OpenAI／Mistral 請下載後採自建後端。未連線時 AI 顯示示範輸出，其餘核心功能照常可用。</div></div>`;
 }
 async function testLLM(){
   const box=document.getElementById("llmStatus"); if(!box) return;
-  const key=document.getElementById("setKey").value.trim();
-  if(key){ S.settings.apiKey=key; const m=document.getElementById("setModel"); if(m) S.settings.model=m.value; await persist(); }
-  if(!llmReady()){ box.innerHTML=`<div class="card pad" style="background:#FBE0DA;border-color:#EBC3B7"><b style="color:var(--warn)">尚未設定金鑰</b><div class="hint" style="margin-top:4px">請先填入 sk-ant-… 金鑰再測試。</div></div>`; return; }
+  const p=document.getElementById("setProvider"); if(p) S.settings.provider=p.value;
+  const m=document.getElementById("setModel"); if(m) S.settings.model=m.value.trim()||LLM_MODELS[llmProvider()][0];
+  const key=document.getElementById("setKey"); if(key) setLlmKey(key.value);
+  await persist();
+  if(!llmReady()){
+    const msg=llmRequiresBackend(llmProvider())?llmProviderLabel(llmProvider())+" 請下載後使用自建後端，勿將金鑰放入瀏覽器。":"請先填入所選供應商的個人測試金鑰。";
+    box.innerHTML=`<div class="card pad" style="background:#FBE0DA;border-color:#EBC3B7"><b style="color:var(--warn)">目前無法測試</b><div class="hint" style="margin-top:4px">${msg}</div></div>`; return;
+  }
   box.innerHTML=`<div class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span> 測試中…</div>`;
   try{
     const data=await llmCall({max_tokens:32,messages:[{role:"user",content:"回覆兩個字：連線成功"}]});
     const t=llmText(data);
-    box.innerHTML=`<div class="card pad" style="background:#E4F1E9;border-color:#B9DCC8"><b style="color:var(--ok)">✓ 連線成功</b><div class="hint" style="margin-top:4px">模型回覆：「${esc(t.slice(0,40))}」。AI 功能已啟用。</div></div>`;
+    box.innerHTML=`<div class="card pad" style="background:#E4F1E9;border-color:#B9DCC8"><b style="color:var(--ok)">✓ 連線成功</b><div class="hint" style="margin-top:4px">${llmProviderLabel(data.provider||llmProvider())}／${esc(data.model||llmModel())} 回覆：「${esc(t.slice(0,40))}」。</div></div>`;
   }catch(e){
     const msg=String(e.message||e);
-    const hint = msg.indexOf("401")>=0 ? "金鑰無效或未授權，請確認 sk-ant- 金鑰正確、且帳戶有額度。"
-      : msg.indexOf("CORS")>=0 ? "瀏覽器連線被擋。請確認使用最新版 Fancy（已帶 direct-browser-access 標頭）。"
-      : msg.indexOf("尚未設定金鑰")>=0 ? "請先填入金鑰。" : "請檢查網路與金鑰；詳細訊息：" + esc(msg.slice(0,120));
+    const hint=(msg.includes("401")||msg.includes("403"))?"金鑰無效、未授權或帳戶無可用額度。"
+      :msg.includes("瀏覽器")?esc(msg)
+      :msg.includes("尚未設定金鑰")?"請先填入金鑰。":"請檢查網路、模型名稱與金鑰；詳細訊息："+esc(msg.slice(0,120));
     box.innerHTML=`<div class="card pad" style="background:#FBE0DA;border-color:#EBC3B7"><b style="color:var(--warn)">✗ 連線失敗</b><div class="hint" style="margin-top:4px">${hint}</div></div>`;
   }
 }
@@ -1408,7 +1514,7 @@ async function saveLicense(){
   }
   render();
 }
-async function resetData(){ S=seed(); await persist(); route="cases"; render(); toast("已重設為示範資料"); }
+async function resetData(){ setLlmKey(""); S=seed(); await persist(); route="cases"; render(); toast("已重設為示範資料與測試金鑰"); }
 
 /* ---------- MODALS ---------- */
 function modal(title, inner){
@@ -1752,10 +1858,10 @@ async function sendChat(){
     const data=await llmCall({max_tokens:1200,
         system:"你是 Fancy AI，台灣法律 AI 助理，服務執業律師。以繁體中文、台灣法律脈絡作答；引用法條或裁判時提醒使用者自行覆核；用語精確、結構清楚、避免冗詞。",
         messages:history});
-    reply=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    reply=llmText(data);
     if(!reply) throw new Error("empty"); live=true;
   }catch(e){
-    reply="（此展示環境未連上模型，故無法即時回覆。）\n\nFancy 為開源自建：在你的部署中，於「設定」填入自己的 Claude 金鑰後即可對話，token 由你直接支付給 Anthropic；也可改接其他 LLM，或串你既有的裁判家判決庫。你剛才問的是：「"+text+"」——接上金鑰後即會在此回覆。";
+    reply="（此展示環境未連上模型，故無法即時回覆。）\n\nFancy AI 為開源自建：正式部署可在伺服器選用 Claude、Gemini、OpenAI 或 Mistral，token 費用由你直接支付給供應商，Fancy AI 不經手、不抽成。GitHub Pages 僅提供 Claude／Gemini 的非機密測試直連；也可串接你既有的裁判家判決庫。你剛才問的是：「"+text+"」——完成安全設定後即會在此回覆。";
   }
   btn.disabled=false;
   c.messages.push({role:"assistant",content:reply});

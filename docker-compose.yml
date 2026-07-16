@@ -1,5 +1,5 @@
 # Fancy AI —— 一鍵自建（Postgres + App）
-# 1) cp .env.example .env  並填入 ANTHROPIC_API_KEY（自帶金鑰）
+# 1) cp .env.example .env  並選擇 LLM_PROVIDER，填入相應供應商金鑰（自帶金鑰）
 # 2) docker compose up -d --build
 # 3) 首次建表與示範資料：docker compose exec app npx prisma migrate deploy && docker compose exec app npm run db:seed
 # 4) 開 http://localhost:3000
@@ -28,7 +28,15 @@ services:
     environment:
       DATABASE_URL: postgresql://fancy:${POSTGRES_PASSWORD:-fancy_dev_pw}@db:5432/fancy?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-change_me_in_production}
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GOOGLE_MODEL: ${GOOGLE_MODEL:-gemini-2.5-flash}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-large-latest}
       NODE_ENV: production
       # 映像已內含 Prisma 引擎；離線／受限網路部署不應因 checksum 端點不可達而失敗。
       PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING: "1"

@@ -1,36 +1,59 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateText } from "@/lib/llm";
 import { getCtx, loadPerms } from "@/lib/session";
 import { requirePermission } from "@/lib/rbac";
 
-// POST /api/notice  { caseId?, from, to, kind, facts }
+// POST /api/notice  { caseId?, from, to, kind, facts, provider?, model? }
 export async function POST(req: Request) {
   try {
     const ctx = await getCtx(req);
     requirePermission(ctx.role, "存證信函", await loadPerms(ctx.firmId));
-    const b = await req.json();
-    const model = process.env.LLM_MODEL ?? "claude-sonnet-4-6";
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "尚未設定事務所 AI 金鑰" }, { status: 501 });
+    const body = (await req.json()) as {
+      caseId?: string;
+      from?: string;
+      to?: string;
+      kind?: string;
+      facts?: string;
+      provider?: string;
+      model?: string;
+    };
+
+    let verifiedCaseId: string | null = null;
+    if (body.caseId) {
+      const c = await prisma.case.findFirst({
+        where: { id: body.caseId, firmId: ctx.firmId },
+        select: { id: true },
+      });
+      if (!c) return NextResponse.json({ error: "案件不存在" }, { status: 404 });
+      verifiedCaseId = c.id;
+    }
 
     const prompt =
-      `依台灣郵局存證信函格式，草擬主題「${b.kind}」之存證信函：含寄件人/收件人/副本欄、主旨、分項說明（引用民法條號與催告期間）、結尾「此致…台照」與具名日期。` +
-      `寄件人：${b.from ?? ""}；收件人：${b.to ?? ""}；事實：${b.facts ?? ""}。只輸出信函本文。`;
+      `依台灣郵局存證信函格式，草擬主題「${body.kind ?? ""}」之存證信函：含寄件人/收件人/副本欄、主旨、分項說明（引用民法條號與催告期間）、結尾「此致…台照」與具名日期。` +
+      `寄件人：${body.from ?? ""}；收件人：${body.to ?? ""}；事實：${body.facts ?? ""}。只輸出信函本文。`;
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: "user", content: prompt }] }),
+    const generated = await generateText({
+      messages: [{ role: "user", content: prompt }],
+      maxTokens: 1500,
+      provider: body.provider,
+      model: body.model,
     });
-    if (!r.ok) return NextResponse.json({ error: `AI 服務錯誤 ${r.status}` }, { status: 502 });
-    const data = await r.json();
-    const content: string = (data.content ?? [])
-      .filter((x: { type: string }) => x.type === "text").map((x: { text: string }) => x.text).join("\n").trim();
 
     const saved = await prisma.notice.create({
-      data: { caseId: b.caseId ?? null, kind: b.kind, content, model },
+      data: {
+        caseId: verifiedCaseId,
+        kind: body.kind ?? "存證信函",
+        content: generated.text,
+        model: `${generated.provider}:${generated.model}`,
+      },
     });
-    return NextResponse.json({ id: saved.id, content, model });
+    return NextResponse.json({
+      id: saved.id,
+      content: generated.text,
+      provider: generated.provider,
+      model: generated.model,
+    });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     return NextResponse.json({ error: (e as Error).message }, { status });

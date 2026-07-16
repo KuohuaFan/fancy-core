@@ -43,7 +43,7 @@ Fancy.ready(function () {
 6. **寫頁面函式**：新增 `function viewYourPage(){ return \`…HTML 字串…\`; }`。取資料用 `S`，存資料用 `await persist()`；彈窗用 `modal(title, html)`；提示用 `toast(msg)`。
 7. **（選用）加資料**：若需持久化，於 `seed()`（或 `ensureChat()` 那種向後相容補丁）初始化欄位，變更後呼叫 `persist()`。
 
-要接 AI：仿 `draft()`／`genNotice()`／`sendChat()`——`fetch("https://api.anthropic.com/v1/messages", …)`，失敗時 fallback。自建環境以使用者「設定」頁填入的自帶金鑰運作。
+要接 AI：自建版一律呼叫登入保護的 `/api/llm`，由 `src/lib/llm.ts` 統一代理 Claude、Gemini、OpenAI 或 Mistral；正式金鑰只放在伺服器環境變數。單檔展示版只允許 Claude／Gemini 使用目前分頁的短期測試金鑰，OpenAI／Mistral 不提供瀏覽器直連。
 
 ## 三、前端：移除一個功能
 

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { generateText, LLMError, type LLMMessage } from "@/lib/llm";
 import { getCtx } from "@/lib/session";
 
-// POST /api/llm —— 伺服器端 LLM 代理
-// 自建部署時，前端一律呼叫這裡；金鑰只存在伺服器環境，永不回傳至瀏覽器。
+// POST /api/llm —— Claude／Gemini／OpenAI／Mistral 共用伺服器端代理。
+// 自建部署時，前端一律呼叫這裡；供應商金鑰只存在伺服器環境，永不回傳至瀏覽器。
 export async function POST(req: Request) {
   try {
     await getCtx(req);
@@ -11,45 +12,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message }, { status: err.status ?? 401 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "伺服器未設定 ANTHROPIC_API_KEY" }, { status: 501 });
-  }
-
   try {
     const body = (await req.json()) as {
-      messages?: unknown;
+      messages?: LLMMessage[];
       system?: unknown;
       max_tokens?: unknown;
+      provider?: unknown;
+      model?: unknown;
     };
-    if (!Array.isArray(body.messages)) {
-      return NextResponse.json({ error: "messages 必須為陣列" }, { status: 400 });
-    }
 
     const requested = Number(body.max_tokens ?? 1200);
-    const maxTokens = Number.isFinite(requested)
-      ? Math.max(1, Math.min(1200, Math.floor(requested)))
-      : 1200;
-
-    const payload: Record<string, unknown> = {
-      model: process.env.LLM_MODEL ?? "claude-sonnet-4-6",
-      max_tokens: maxTokens,
-      messages: body.messages,
-    };
-    if (typeof body.system === "string") payload.system = body.system;
-
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(payload),
+    const result = await generateText({
+      messages: body.messages ?? [],
+      system: typeof body.system === "string" ? body.system : undefined,
+      maxTokens: Number.isFinite(requested) ? requested : 1200,
+      provider: typeof body.provider === "string" ? body.provider : undefined,
+      model: typeof body.model === "string" ? body.model : undefined,
     });
-    const data = await r.json();
-    return NextResponse.json(data, { status: r.status });
+
+    // 保持既有單檔版與外掛可讀取的 Anthropic-style content，同時標明實際供應商與模型。
+    return NextResponse.json({
+      content: [{ type: "text", text: result.text }],
+      provider: result.provider,
+      model: result.model,
+    });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    const err = e as Error & { status?: number };
+    const status = e instanceof LLMError ? e.status : err.status ?? 500;
+    return NextResponse.json({ error: err.message }, { status });
   }
 }
